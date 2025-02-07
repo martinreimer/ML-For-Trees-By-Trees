@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: Climavi API
+  description: 'REST API documentation for Climavi IoT weather, microclimate and soil monitoring system.'
+  contact:
+    name: Agvolution GmbH
+    url: https://agvolution.com
+    email: support@agvolution.com
+  version: 1.0.0
+servers:
+  - url: https://iot.climavi.eu:443
+    description: Production
+tags:
+  - name: login-endpoint
+    description: Login Endpoint
+  - name: device-data-controller
+    description: Device Data Controller
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - login-endpoint
+      summary: Login method to get user JWT token data
+      description: >-
+        Login method used to authenticate user and get JWT token data.
+
+
+        Value of the response **token** field can be used as **X-Authorization**
+        header value:
+
+
+        `X-Authorization: Bearer $JWT_TOKEN_VALUE`.
+      operationId: loginPost
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                account-disabled:
+                  summary: Disabled account
+                  value:
+                    status: 401
+                    message: User account is not active
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:55.631+00:00'
+                account-locked:
+                  summary: Locked account
+                  value:
+                    status: 401
+                    message: User account is locked due to security policy
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:55.631+00:00'
+                authentication-failed:
+                  summary: General authentication error
+                  value:
+                    status: 401
+                    message: Authentication failed
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:55.631+00:00'
+                bad-credentials:
+                  summary: Bad credentials
+                  value:
+                    status: 401
+                    message: Invalid username or password
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:55.631+00:00'
+                token-expired:
+                  summary: JWT token expired
+                  value:
+                    status: 401
+                    message: Token has expired
+                    errorCode: 11
+                    timestamp: '2024-02-19T06:25:55.631+00:00'
+        '401 ':
+          description: Unauthorized (**Expired credentials**)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviCredentialsExpiredResponse'
+              examples:
+                credentials-expired:
+                  summary: Expired credentials
+                  value:
+                    status: 401
+                    message: User password expired!
+                    errorCode: 15
+                    timestamp: '2024-02-19T06:25:55.632+00:00'
+                    resetToken: kVYzxrJTzJMyZ0gsunZxyLgP8GsbKn
+  /api/entitiesQuery/find:
+    post:
+      tags:
+        - device-data-controller
+      summary: Filter and search all available devices, and return the latest measurements.
+      description: >-
+        Allows to flexibly filter the device list (e.g. fetch data for a single or all available devices, or search by a device name pattern, etc.) and return the latest measurements for all devices.
+        The query supports pagination and sorting as well.
+
+        ### Example 1: Return current (latest) measurements for all devices
+
+        Request body:
+
+        ```json
+        
+        {
+          "entityFilter": {
+              "type": "entityType",
+              "resolveMultiple": true,
+              "entityType": "DEVICE"
+          },
+          "entityFields": [
+              {
+                  "type": "ENTITY_FIELD",
+                  "key": "name"
+              },
+              {
+                  "type": "ENTITY_FIELD",
+                  "key": "label"
+              }
+          ],
+          "latestValues": [
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "latitude"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "longitude"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "ENV__ATMO__RAIN__24h"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "ENV__ATMO__RAIN__3d"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "ENV__ATMO__RAIN__7d"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "ENV__ATMO__RAIN__14d"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "ENV__ATMO__RAIN__30d"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "EXT|ENV__ATMO__RAIN__DELTA"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "TOP|ENV__ATMO__T"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "TOP|ENV__ATMO__T__WET"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "TOP|ENV__ATMO__RH"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "TOP|ENV__ATMO__P"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "TOP|ENV__ATMO__IRRADIATION"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "EXT|ENV__ATMO__WIND__SPEED"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "EXT|ENV__ATMO__WIND__SPEED__PEAK"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "EXT|ENV__ATMO__WIND__DIRECTION"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-10|ENV__SOIL__VWC"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-30|ENV__SOIL__VWC"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-45|ENV__SOIL__VWC"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "-10|ENV__SOIL__VWC__fc"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "-30|ENV__SOIL__VWC__fc"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "-45|ENV__SOIL__VWC__fc"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-10|ENV__SOIL__T"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-30|ENV__SOIL__T"
+              },
+              {
+                  "type": "TIME_SERIES",
+                  "key": "-45|ENV__SOIL__T"
+              },
+              {
+                  "type": "ATTRIBUTE",
+                  "key": "REC|ENV__SOIL__IRRIGATION"
+              }
+          ],
+          "pageLink": {
+              "page": 0,
+              "pageSize": 100,
+              "sortOrder": {
+                  "key": {
+                      "key": "label",
+                      "type": "ENTITY_FIELD"
+                  },
+                  "direction": "ASC"
+              }
+          }
+        }
+
+        ```
+
+
+        ### Example 2: Return current (latest) measurements for a single device or list of devices
+
+        Use the request body from example 1 and replace the entityFilter with the following:
+
+        ```json
+
+        "entityFilter": {
+            "type": "entityList",
+            "entityType": "DEVICE",
+            "entityList": [
+                "275b8ca0-a0b5-11ee-8a09-5f563111ac33",
+                "be308cd0-a3f2-11ee-8a09-5f563111ac33"
+            ]
+        }
+
+        ```
+
+
+        ## Description of the measurement parameters
+        
+        * `latitude` - latitude of the device location
+
+
+        * `longitude` - longitude of the device location
+
+        * `name` - serial number of the device
+
+        * `label` - custom device name
+
+        * `REC|ENV__SOIL__IRRIGATION` - current irrigation recommendation at the device location (mm)
+
+        * `ENV__ATMO__RAIN__24h` - rain sum for the last 24 hours (mm)
+
+        * `ENV__ATMO__RAIN__3d` - rain sum for the last 3 days (mm)
+
+        * `ENV__ATMO__RAIN__7d` - rain sum for the last 7 days (mm)
+
+        * `ENV__ATMO__RAIN__14d` - rain sum for the last 14 days (mm)
+
+        * `ENV__ATMO__RAIN__30d` - rain sum for the last 30 days (mm)
+
+        * `EXT|ENV__ATMO__RAIN__DELTA` - rain amounts between current and next measurement (mm)
+
+        * `TOP|ENV__ATMO__T` - (dry) temperature (°C) (also accessible via ENV__ATMO__T__DRY)
+        
+        * `TOP|ENV__ATMO__T__WET` - wet temperature (°C)
+
+        * `TOP|ENV__ATMO__RH` - relative humidity (%)
+
+        * `TOP|ENV__ATMO__P` - air pressure (hPa)
+
+        * `TOP|ENV__ATMO__IRRADIATION` - solar radiation (W/m²)
+
+        * `EXT|ENV__ATMO__WIND__SPEED` - wind speed (km/h)
+
+        * `EXT|ENV__ATMO__WIND__SPEED__PEAK` - wind speed peak (km/h)
+
+        * `EXT|ENV__ATMO__WIND__DIRECTION` - wind direction (°)
+
+        * `-10|ENV__SOIL__VWC` - volumetric soil water content at 10 cm depth (%)
+
+        * `-30|ENV__SOIL__VWC` - volumetric soil water content at 30 cm depth (%)
+
+        * `-45|ENV__SOIL__VWC` - volumetric soil water content at 45 cm depth (%)
+
+        * `-10|ENV__SOIL__VWC__fc` - forecast (upcoming 7 days) of volumetric soil water content at 10 cm depth (%)
+
+        * `-30|ENV__SOIL__VWC__fc` - forecast (upcoming 7 days) of volumetric soil water content at 30 cm depth (%)
+
+        * `-45|ENV__SOIL__VWC__fc` - forecast (upcoming 7 days) of volumetric soil water content at 45 cm depth (%)
+
+        * `-10|ENV__SOIL__T` - soil temperature at 10 cm depth (°C)
+
+        * `-30|ENV__SOIL__T` - soil temperature at 30 cm depth (°C)
+
+        * `-45|ENV__SOIL__T` - soil temperature at 45 cm depth (°C)
+
+
+        **Note 1:** Not all devices support all measurements, as the devices are available in a modular design. The measurements are available only if the corresponding sensors are installed. Remove objects with ts === 0 or value === "" to only keep the currently available measurements.
+
+
+        **Note 2:** Forecasts for above-surface parameters are available as well. Pleaase ask for details.
+
+      operationId: findEntityDataByQueryUsingPOST
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityDataQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageData«EntityData»'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-400:
+                  summary: Bad Request
+                  value:
+                    status: 400
+                    message: Invalid request body
+                    errorCode: 31
+                    timestamp: '2024-02-19T06:25:54.228+00:00'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-401:
+                  summary: Unauthorized
+                  value:
+                    status: 401
+                    message: Authentication failed
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:54.229+00:00'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-403:
+                  summary: Forbidden
+                  value:
+                    status: 403
+                    message: You don't have permission to perform this operation!
+                    errorCode: 20
+                    timestamp: '2024-02-19T06:25:54.229+00:00'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-404:
+                  summary: Not Found
+                  value:
+                    status: 404
+                    message: Requested item wasn't found!
+                    errorCode: 32
+                    timestamp: '2024-02-19T06:25:54.229+00:00'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-429:
+                  summary: Too Many Requests
+                  value:
+                    status: 429
+                    message: Too many requests for current customer!
+                    errorCode: 33
+                    timestamp: '2024-02-19T06:25:54.229+00:00'
+      security:
+        - HTTP login form:
+            - CUSTOMER_USER
+  /api/plugins/telemetry/DEVICE/{entityId}/values/timeseries{?agg,endTs,interval,keys,limit,orderBy,startTs,useStrictDataTypes}:
+    get:
+      tags:
+        - device-data-controller
+      summary: Get raw time-series data
+      description: >-
+        Inspect the time-series values for a single specified device.
+        
+        Returns not aggregated data by default. Use aggregation function ('agg') and aggregation interval ('interval') to enable aggregation of the results on the database / server side. The aggregation is generally more efficient then fetching all records. 
+
+
+        For a list of available keys and their respective units, refer to the entitiesQuery description above. Time series data can be queried for all keys of type TIME_SERIES.
+
+
+        In case a station is not recording data for a specific key, the response will contain an empty array for the respective key.
+
+
+        This query:
+
+        ```json
+
+        {
+          "keys": "TOP%7CENV__ATMO__T,TOP%7CENV__ATMO__RH,TOP%7CENV__ATMO__P,EXT%7CENV__ATMO__RAIN__DELTA,-30%7CENV__SOIL__VWC",
+          "startTs": 1708598150934,
+          "endTs": 1708616235790,
+          "orderBy": "DESC",
+          "useStrictDataTypes":true
+        }
+
+        ````
+
+        Yields the following response:
+
+        ```json
+
+        {
+          "TOP|ENV__ATMO__T": [
+              {
+                  "ts": 1708613881000,
+                  "value": 9.80849838256836
+              },
+              {
+                  "ts": 1708610314000,
+                  "value": 9.341190338134766
+              },
+              {
+                  "ts": 1708606760000,
+                  "value": 9.525444030761719
+              },
+              {
+                  "ts": 1708603200000,
+                  "value": 9.96337890625
+              },
+              {
+                  "ts": 1708599637000,
+                  "value": 9.018081665039062
+              }
+          ],
+          "TOP|ENV__ATMO__RH": [
+              {
+                  "ts": 1708613881000,
+                  "value": 93
+              },
+              {
+                  "ts": 1708610314000,
+                  "value": 93
+              },
+              {
+                  "ts": 1708606760000,
+                  "value": 91
+              },
+              {
+                  "ts": 1708603200000,
+                  "value": 92
+              },
+              {
+                  "ts": 1708599637000,
+                  "value": 93
+              }
+          ],
+          "TOP|ENV__ATMO__P": [
+              {
+                  "ts": 1708613881000,
+                  "value": 1012.5805053710938
+              },
+              {
+                  "ts": 1708610314000,
+                  "value": 1016.4572143554688
+              },
+              {
+                  "ts": 1708606760000,
+                  "value": 1014.2053833007812
+              },
+              {
+                  "ts": 1708603200000,
+                  "value": 1006.4528198242188
+              },
+              {
+                  "ts": 1708599637000,
+                  "value": 1014.8090209960938
+              }
+          ],
+          "-30|ENV__SOIL__VWC": [
+              {
+                  "ts": 1708613881000,
+                  "value": 30.2
+              },
+              {
+                  "ts": 1708606760000,
+                  "value": 30.19
+              },
+              {
+                  "ts": 1708599637000,
+                  "value": 30.2
+              }
+          ]
+        }
+
+        ```
+
+
+        Please note, that the pipe character '|' in the key query parameter must be escaped as '%7C' in the URL.
+
+      operationId: getTimeseriesUsingGET
+      parameters:
+        - name: entityId
+          in: path
+          description: >-
+            A string value representing the entity id. For example,
+            '275b8ca0-a0b5-11ee-8a09-5f563111ac33'
+          required: true
+          style: simple
+          schema:
+            type: string
+        - name: keys
+          in: query
+          description: >-
+            A string value representing the comma-separated list of telemetry
+            keys.
+          required: true
+          style: form
+          allowReserved: true
+          schema:
+            type: string
+        - name: startTs
+          in: query
+          description: >-
+            A long value representing the start timestamp of the time range in
+            milliseconds, UTC.
+          required: true
+          style: form
+          allowReserved: true
+          schema:
+            type: integer
+            format: int64
+        - name: endTs
+          in: query
+          description: >-
+            A long value representing the end timestamp of the time range in
+            milliseconds, UTC.
+          required: true
+          style: form
+          allowReserved: true
+          schema:
+            type: integer
+            format: int64
+        - name: interval
+          in: query
+          description: >-
+            A long value representing the aggregation interval range in
+            milliseconds.
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          description: >-
+            An integer value that represents a max number of timeseries data
+            points to fetch. This parameter is used only in the case if 'agg'
+            parameter is set to 'NONE'.
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: agg
+          in: query
+          description: >-
+            A string value representing the aggregation function. If the
+            interval is not specified, 'agg' parameter will use 'NONE' value.
+          required: false
+          style: form
+          schema:
+            type: string
+            enum:
+              - AVG
+              - COUNT
+              - MAX
+              - MIN
+              - NONE
+              - SUM
+        - name: orderBy
+          in: query
+          description: Sort order. ASC (ASCENDING) or DESC (DESCENDING)
+          required: false
+          style: form
+          schema:
+            type: string
+            enum:
+              - ASC
+              - DESC
+        - name: useStrictDataTypes
+          in: query
+          description: >-
+            Enables/disables conversion of telemetry values to strings.
+            Conversion is enabled by default. Set parameter to 'true' in order
+            to disable the conversion.
+          required: false
+          style: form
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeferredResult.ResponseEntity'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-400:
+                  summary: Bad Request
+                  value:
+                    status: 400
+                    message: 'Invalid UUID string: 123'
+                    errorCode: 31
+                    timestamp: '2024-02-19T06:25:54.223+00:00'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-401:
+                  summary: Unauthorized
+                  value:
+                    status: 401
+                    message: Authentication failed
+                    errorCode: 10
+                    timestamp: '2024-02-19T06:25:54.228+00:00'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-403:
+                  summary: Forbidden
+                  value:
+                    status: 403
+                    message: You don't have permission to perform this operation!
+                    errorCode: 20
+                    timestamp: '2024-02-19T06:25:54.228+00:00'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-404:
+                  summary: Not Found
+                  value:
+                    status: 404
+                    message: Requested item wasn't found!
+                    errorCode: 32
+                    timestamp: '2024-02-19T06:25:54.228+00:00'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimaviErrorResponse'
+              examples:
+                error-code-429:
+                  summary: Too Many Requests
+                  value:
+                    status: 429
+                    message: Too many requests for current topSecret!
+                    errorCode: 33
+                    timestamp: '2024-02-19T06:25:54.228+00:00'
+      security:
+        - HTTP login form:
+            - CUSTOMER_USER
+components:
+  schemas:
+    ClimaviCredentialsExpiredResponse:
+      title: ClimaviCredentialsExpiredResponse
+      type: object
+      properties:
+        subscriptionEntry:
+          type: string
+          enum:
+            - ASSET_COUNT
+            - DEVICE_COUNT
+            - WHITE_LABELING
+        subscriptionErrorCode:
+          type: string
+          enum:
+            - FEATURE_DISABLED
+            - LIMIT_REACHED
+            - UNSUPPORTED_SOLUTION_TEMPLATE_PLAN
+        subscriptionValue:
+          $ref: '#/components/schemas/JsonNode'
+        status:
+          type: integer
+          description: HTTP Response Status Code
+          format: int32
+          readOnly: true
+          example: 401
+        message:
+          type: string
+          description: Error message
+          readOnly: true
+          example: Authentication failed
+        errorCode:
+          type: object
+          description: |-
+            Platform error code:
+            * `2` - General error (HTTP: 500 - Internal Server Error)
+
+            * `10` - Authentication failed (HTTP: 401 - Unauthorized)
+
+            * `11` - JWT token expired (HTTP: 401 - Unauthorized)
+
+            * `15` - Credentials expired (HTTP: 401 - Unauthorized)
+
+            * `20` - Permission denied (HTTP: 403 - Forbidden)
+
+            * `30` - Invalid arguments (HTTP: 400 - Bad Request)
+
+            * `31` - Bad request params (HTTP: 400 - Bad Request)
+
+            * `32` - Item not found (HTTP: 404 - Not Found)
+
+            * `33` - Too many requests (HTTP: 429 - Too Many Requests)
+
+            * `34` - Too many updates (Too many updates over Websocket session)
+
+            * `40` - Subscription violation (HTTP: 403 - Forbidden)
+          readOnly: true
+          example: '10'
+        timestamp:
+          type: string
+          description: Timestamp
+          format: date-time
+          readOnly: true
+        resetToken:
+          type: string
+          description: Password reset token
+          readOnly: true
+    ClimaviErrorResponse:
+      title: ClimaviErrorResponse
+      type: object
+      properties:
+        subscriptionEntry:
+          type: string
+          enum:
+            - ASSET_COUNT
+            - DEVICE_COUNT
+            - WHITE_LABELING
+        subscriptionErrorCode:
+          type: string
+          enum:
+            - FEATURE_DISABLED
+            - LIMIT_REACHED
+            - UNSUPPORTED_SOLUTION_TEMPLATE_PLAN
+        subscriptionValue:
+          $ref: '#/components/schemas/JsonNode'
+        status:
+          type: integer
+          description: HTTP Response Status Code
+          format: int32
+          readOnly: true
+          example: 401
+        message:
+          type: string
+          description: Error message
+          readOnly: true
+          example: Authentication failed
+        errorCode:
+          type: object
+          description: |-
+            Platform error code:
+            * `2` - General error (HTTP: 500 - Internal Server Error)
+
+            * `10` - Authentication failed (HTTP: 401 - Unauthorized)
+
+            * `11` - JWT token expired (HTTP: 401 - Unauthorized)
+
+            * `15` - Credentials expired (HTTP: 401 - Unauthorized)
+
+            * `20` - Permission denied (HTTP: 403 - Forbidden)
+
+            * `30` - Invalid arguments (HTTP: 400 - Bad Request)
+
+            * `31` - Bad request params (HTTP: 400 - Bad Request)
+
+            * `32` - Item not found (HTTP: 404 - Not Found)
+
+            * `33` - Too many requests (HTTP: 429 - Too Many Requests)
+
+            * `34` - Too many updates (Too many updates over Websocket session)
+
+            * `40` - Subscription violation (HTTP: 403 - Forbidden)
+          readOnly: true
+          example: '10'
+        timestamp:
+          type: string
+          description: Timestamp
+          format: date-time
+          readOnly: true
+    JsonNode:
+      title: JsonNode
+      type: object
+    LoginRequest:
+      title: LoginRequest
+      required:
+        - password
+        - username
+      type: object
+      properties:
+        username:
+          type: string
+          description: User email
+          example: customer@iot.climavi.eu
+        password:
+          type: string
+          description: User password
+          example: topSecret
+    LoginResponse:
+      title: LoginResponse
+      required:
+        - refreshToken
+        - token
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token
+          example: eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZW5hbnRAdGhpbmdzYm9hcmQub3JnIi...
+        refreshToken:
+          type: string
+          description: Refresh token
+          example: eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZW5hbnRAdGhpbmdzYm9hcmQub3JnIi...
+    DeferredResult.ResponseEntity:
+      title: DeferredResult.ResponseEntity
+      type: object
+      properties:
+        result:
+          type: object
+        setOrExpired:
+          type: boolean
